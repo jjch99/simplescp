@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"net"
 	"os"
+	"os/user"
 
 	"github.com/FranGM/simplelog"
 	"github.com/flynn/go-shlex"
@@ -32,11 +32,18 @@ type scpConfig struct {
 }
 
 func newScpConfig() *scpConfig {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
+	osuser, _ := user.Current()
+	userHome, _ := os.UserHomeDir()
+
+	privateKeyFile := userHome + "/.ssh/id_rsa"
+	authKeysFile := userHome + "/.ssh/authorized_keys"
+	return &scpConfig{
+		Port:           "8222",
+		User:           osuser.Username,
+		Dir:            "/",
+		PrivateKeyFile: privateKeyFile,
+		AuthKeysFile:   authKeysFile,
 	}
-	return &scpConfig{Port: "2222", User: "scpuser", Dir: workingDir}
 }
 
 // Allows us to send to the client the exit status code of the command they asked as to run

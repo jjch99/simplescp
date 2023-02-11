@@ -93,6 +93,7 @@ func (c *scpConfig) initPrivateKey() error {
 		if err != nil {
 			return fmt.Errorf("Failed to parse private key: %v", err)
 		}
+		simplelog.Debug.Printf("Get private key from " + c.PrivateKeyFile)
 		// TODO: At this point we've generated a new private key so store it in ~/.simplescp/keys for the next time
 	}
 	return nil
@@ -109,7 +110,7 @@ func (c *scpConfig) initPrivateKey() error {
 func initSettings() *scpConfig {
 
 	// TODO: workingDir should be configurable
-	simplelog.SetThreshold(simplelog.LevelInfo)
+	simplelog.SetThreshold(simplelog.LevelDebug)
 
 	config := newScpConfig()
 	err := envconfig.Process("simplescp", config)
