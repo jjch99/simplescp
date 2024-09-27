@@ -1,12 +1,14 @@
 package main
 
 import (
+	"io"
 	"net"
 	"os"
 	"os/user"
 
 	"github.com/FranGM/simplelog"
 	"github.com/flynn/go-shlex"
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -55,6 +57,26 @@ func sendExitStatusCode(channel ssh.Channel, status uint8) {
 		// TODO: Don't we prefer to return the error here?
 		simplelog.Error.Printf("Failed to forward exit-status to client: %v", err)
 	}
+}
+
+func handleSFTP(channel ssh.Channel) {
+
+	server, err := sftp.NewServer(channel)
+	if err != nil {
+		simplelog.Debug.Printf("Failed to start SFTP server: %v", err)
+		return
+	}
+	defer server.Close()
+
+	if err := server.Serve(); err == nil || err == io.EOF {
+		simplelog.Debug.Printf("SFTP server exited cleanly")
+		sendExitStatusCode(channel, 0)
+	} else {
+		simplelog.Debug.Printf("SFTP server exited with error: %v", err)
+		sendExitStatusCode(channel, 1)
+	}
+
+	channel.Close()
 }
 
 // Handle requests received through a channel
@@ -185,6 +207,14 @@ func (config scpConfig) handleNewChannel(newChannel ssh.NewChannel) {
 			// Ignore these for now
 			// TODO: Is there any kind of env settings we want to honor?
 			req.Reply(true, nil)
+		case "subsystem":
+			// SFTP
+			if string(req.Payload[4:]) == "sftp" {
+				handleSFTP(channel)
+				req.Reply(true, nil)
+			} else {
+				req.Reply(true, nil)
+			}
 		default:
 			simplelog.Debug.Printf("Req type: %v, req payload: %v", req.Type, string(req.Payload))
 			req.Reply(true, nil)
